@@ -1,11 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko" class="notranslate" translate="no">
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <meta name="google" content="notranslate">
 </head>
 <body>
 <script>
+    // localStorage에서 점수 불러오기
+    function loadScores() {
+        let red = parseInt(localStorage.getItem('redScore'), 10);
+        let black = parseInt(localStorage.getItem('blackScore'), 10);
+        if (isNaN(red)) red = 0;
+        if (isNaN(black)) black = 0;
+        return { red, black };
+    }
+
+    // localStorage에 점수 저장
+    function saveScores(red, black) {
+        localStorage.setItem('redScore', red);
+        localStorage.setItem('blackScore', black);
+    }
+
+    // 점수 변수 (초기화)
+    let { red: redScore, black: blackScore } = loadScores();
+
     // 점수판(scoreBoard) 생성 및 스타일
     let scoreBoard = document.createElement('div');
     scoreBoard.style.position = 'fixed';
@@ -21,15 +40,32 @@
     scoreBoard.style.zIndex = 1000;
     document.body.appendChild(scoreBoard);
 
-    // 점수 변수
-    let redScore = 0;
-    let blackScore = 0;
-
     // 점수판 업데이트 함수
     function updateScore() {
         scoreBoard.innerHTML = `🟥 Red: ${redScore} &nbsp;&nbsp;|&nbsp;&nbsp; ⬛ Black: ${blackScore}`;
+        saveScores(redScore, blackScore); // 점수 변경시마다 저장
     }
     updateScore();
+
+    // 카운트다운 UI 생성
+    let countdownDiv = document.createElement('div');
+    countdownDiv.style.position = 'fixed';
+    countdownDiv.style.top = '50%';
+    countdownDiv.style.left = '50%';
+    countdownDiv.style.transform = 'translate(-50%, -50%)';
+    countdownDiv.style.fontSize = '8em';
+    countdownDiv.style.fontWeight = 'bold';
+    countdownDiv.style.color = '#fff';
+    countdownDiv.style.background = 'rgba(0,0,0,0.7)';
+    countdownDiv.style.padding = '40px 80px';
+    countdownDiv.style.borderRadius = '30px';
+    countdownDiv.style.zIndex = 2000;
+    countdownDiv.style.textAlign = 'center';
+    countdownDiv.style.userSelect = 'none';
+    document.body.appendChild(countdownDiv);
+
+    // 경기 시작 플래그
+    let gameStarted = false;
 
     // 플레이어 div 생성 및 스타일 (red)
     let a = document.createElement('div');
@@ -38,8 +74,8 @@
     a.style.border = '1px solid black';
     a.style.backgroundColor = 'red';
     a.style.position = 'absolute';
-    a.style.left = (window.innerWidth / 2 - 150) + 'px'; // 150 = 300/2
-    a.style.top = '900px'; // 화면 아래쪽
+    a.style.left = (window.innerWidth / 2 - 150) + 'px';
+    a.style.top = '900px';
     a.tabIndex = 0;
     document.body.appendChild(a);
     a.focus();
@@ -196,9 +232,7 @@
 
     // 공의 속도(시작은 느리게)
     let ballDX = 5, ballDY = 6;
-
-    // 게임 상태 플래그
-    let inPlay = true;
+    let inPlay = false; // 경기 시작 전까지 false
 
     // black div 자동 이동(공의 x좌표를 따라감)
     function moveBlack() {
@@ -233,7 +267,6 @@
         );
     }
 
-    // 공 속도 증가 함수
     function increaseBallSpeed(factor = 1.15) {
         let maxSpeed = 25;
         let newDX = Math.abs(ballDX) * factor;
@@ -244,7 +277,6 @@
         ballDY = (ballDY > 0 ? 1 : -1) * newDY;
     }
 
-    // 게임 리셋 함수 (점수 획득 후)
     function resetGame() {
         ballX = window.innerWidth / 2 - ballSize / 2;
         ballY = window.innerHeight / 2 - ballSize / 2;
@@ -259,8 +291,9 @@
         dXo = -6;
         yX = 0;
         oX = window.innerWidth - divWidth;
-        inPlay = true;
-        requestAnimationFrame(moveBall);
+        inPlay = false;
+        // 카운트다운 후 다시 시작
+        startCountdown();
     }
 
     function moveBall() {
@@ -302,24 +335,20 @@
             ballDX *= -1;
         }
 
-        // 플레이어(a, red)와 black div(컴퓨터)와의 대결 충돌 처리
         [a, black].forEach(div => {
             if (isColliding(ball, div)) {
                 const ballRect = ball.getBoundingClientRect();
                 const divRect = div.getBoundingClientRect();
-                // red div(플레이어)에서 위로 튕김
                 if (div === a && ballRect.bottom - ballDY <= divRect.top) {
                     ballDY = -Math.abs(ballDY);
                     ballY = divRect.top - ballSize - (ballRect.top - ballY);
                     increaseBallSpeed(1.05);
                 }
-                // black div(컴퓨터)에서 아래로 튕김
                 else if (div === black && ballRect.top - ballDY >= divRect.bottom) {
                     ballDY = Math.abs(ballDY);
                     ballY = divRect.bottom - (ballRect.top - ballY);
                     increaseBallSpeed(1.10);
                 }
-                // 옆에서 부딪힌 경우 (옵션)
                 else if (ballRect.right - ballDX <= divRect.left) {
                     ballDX = -Math.abs(ballDX);
                     ballX = divRect.left - ballSize - (ballRect.left - ballX);
@@ -357,7 +386,28 @@
         requestAnimationFrame(moveBall);
     }
 
-    moveBall();
+    // 카운트다운 함수
+    function startCountdown() {
+        let count = 3;
+        countdownDiv.innerText = count;
+        countdownDiv.style.display = 'block';
+        let interval = setInterval(() => {
+            count--;
+            if (count > 0) {
+                countdownDiv.innerText = count;
+            } else if (count === 0) {
+                countdownDiv.innerText = '시작!';
+            } else {
+                clearInterval(interval);
+                countdownDiv.style.display = 'none';
+                inPlay = true;
+                requestAnimationFrame(moveBall);
+            }
+        }, 1000);
+    }
+
+    // 최초 3,2,1 카운트다운 시작
+    startCountdown();
 
 </script>
 </body>
