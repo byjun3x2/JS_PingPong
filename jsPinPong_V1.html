@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+<!--    <script defer src="./index.js"></script>-->
+</head>
+<body>
+    <script>
+        // 점수판(scoreBoard) 생성 및 스타일
+        let scoreBoard = document.createElement('div');
+        scoreBoard.style.position = 'fixed';
+        scoreBoard.style.top = '10px';
+        scoreBoard.style.left = '50%';
+        scoreBoard.style.transform = 'translateX(-50%)';
+        scoreBoard.style.fontSize = '2em';
+        scoreBoard.style.fontWeight = 'bold';
+        scoreBoard.style.color = '#222';
+        scoreBoard.style.background = 'rgba(255,255,255,0.8)';
+        scoreBoard.style.padding = '10px 30px';
+        scoreBoard.style.borderRadius = '15px';
+        scoreBoard.style.zIndex = 1000;
+        document.body.appendChild(scoreBoard);
+
+        // 점수 변수
+        let redScore = 0;
+        let blackScore = 0;
+
+        // 점수판 업데이트 함수
+        function updateScore() {
+            scoreBoard.innerHTML = `🟥 Red: ${redScore} &nbsp;&nbsp;|&nbsp;&nbsp; ⬛ Black: ${blackScore}`;
+        }
+        updateScore();
+
+        // 플레이어 div 생성 및 스타일 (red)
+        let a = document.createElement('div');
+        a.style.width = '300px';
+        a.style.height = '10px';
+        a.style.border = '1px solid black';
+        a.style.backgroundColor = 'red';
+        a.style.position = 'absolute';
+        // x축 정가운데에서 시작
+        a.style.left = (window.innerWidth / 2 - 150) + 'px'; // 150 = 300/2
+        a.style.top = '1100px'; // 화면 아래쪽
+        a.tabIndex = 0;
+        document.body.appendChild(a);
+        a.focus();
+
+        // 컴퓨터 div 생성 및 스타일 (black)
+        let black = document.createElement('div');
+        black.style.width = '300px';
+        black.style.height = '10px';
+        black.style.border = '1px solid black';
+        black.style.backgroundColor = 'black';
+        black.style.position = 'absolute';
+        black.style.left = '200px';
+        black.style.top = '50px'; // 화면 위쪽
+        document.body.appendChild(black);
+
+        // blue div(b) 생성 및 스타일
+        let b = document.createElement('div');
+        b.style.width = '300px';
+        b.style.height = '10px';
+        b.style.border = '1px solid black';
+        b.style.backgroundColor = 'blue';
+        b.style.position = 'absolute';
+        b.style.left = '0px';
+        b.style.top = '200px';
+        document.body.appendChild(b);
+
+        // green div(g) 생성 및 스타일
+        let g = document.createElement('div');
+        g.style.width = '300px';
+        g.style.height = '10px';
+        g.style.border = '1px solid black';
+        g.style.backgroundColor = 'green';
+        g.style.position = 'absolute';
+        const divWidth = 300;
+        g.style.left = (window.innerWidth - divWidth) + 'px';
+        g.style.top = '350px';
+        document.body.appendChild(g);
+
+        // yellow div(y) 생성 및 스타일
+        let y = document.createElement('div');
+        y.style.width = '300px';
+        y.style.height = '10px';
+        y.style.border = '1px solid black';
+        y.style.backgroundColor = 'yellow';
+        y.style.position = 'absolute';
+        y.style.left = '0px';
+        y.style.top = '500px';
+        document.body.appendChild(y);
+
+        // orange div(o) 생성 및 스타일
+        let o = document.createElement('div');
+        o.style.width = '300px';
+        o.style.height = '10px';
+        o.style.border = '1px solid black';
+        o.style.backgroundColor = 'orange';
+        o.style.position = 'absolute';
+        o.style.left = (window.innerWidth - divWidth) + 'px';
+        o.style.top = '650px';
+        document.body.appendChild(o);
+
+        // 각 div의 위치 변수
+        let bX = 0;
+        let gX = window.innerWidth - divWidth;
+        let yX = 0;
+        let oX = window.innerWidth - divWidth;
+
+        // 각 쌍의 이동 속도
+        let dX_bg = 4;   // blue-green 쌍
+        let dX_yo = 6;   // yellow-orange 쌍
+
+        // blue-green 쌍 이동
+        function moveBG() {
+            const winW = window.innerWidth;
+            bX += dX_bg;
+            gX -= dX_bg;
+
+            if (bX <= 0) {
+                bX = 0;
+                dX_bg *= -1;
+            }
+            if (bX + divWidth >= winW) {
+                bX = winW - divWidth;
+                dX_bg *= -1;
+            }
+
+            b.style.left = bX + 'px';
+            g.style.left = gX + 'px';
+
+            requestAnimationFrame(moveBG);
+        }
+        moveBG();
+
+        // yellow-orange 쌍 이동 (경계 보정 완전 적용)
+        function moveYO() {
+            const winW = window.innerWidth;
+            yX += dX_yo;
+            oX -= dX_yo;
+
+            // yellow div (왼쪽/오른쪽 벽 보정)
+            if (yX <= 0) {
+                yX = 0;
+                dX_yo *= -1;
+            }
+            if (yX + divWidth >= winW) {
+                yX = winW - divWidth;
+                dX_yo *= -1;
+            }
+
+            // orange div (왼쪽/오른쪽 벽 보정)
+            if (oX <= 0) {
+                oX = 0;
+                dX_yo *= -1;
+            }
+            if (oX + divWidth >= winW) {
+                oX = winW - divWidth;
+                dX_yo *= -1;
+            }
+
+            y.style.left = yX + 'px';
+            o.style.left = oX + 'px';
+
+            requestAnimationFrame(moveYO);
+        }
+        moveYO();
+
+        // 플레이어(red) 이동 (x축만, 브라우저 오버플로우 방지)
+        let keys = {};
+        a.addEventListener('keydown', function(e) { keys[e.key] = true; });
+        a.addEventListener('keyup', function(e) { keys[e.key] = false; });
+
+        setInterval(function() {
+            let left = parseInt(a.style.left, 10);
+            const aWidth = parseInt(a.style.width, 10);
+            const winW = window.innerWidth;
+            const moveStep = 20; // 빠른 이동
+
+            // x축 이동만 허용
+            if (keys['ArrowLeft']) {
+                let newLeft = left - moveStep;
+                if (newLeft < 0) newLeft = 0;
+                a.style.left = newLeft + 'px';
+            }
+            if (keys['ArrowRight']) {
+                let newLeft = left + moveStep;
+                if (newLeft + aWidth > winW) newLeft = winW - aWidth;
+                a.style.left = newLeft + 'px';
+            }
+            // y축 이동은 제거됨!
+        }, 500 / 60);
+
+        // 공(ball) 생성 및 스타일 (정가운데에서 시작)
+        let ball = document.createElement('div');
+        ball.style.width = '50px';
+        ball.style.height = '50px';
+        ball.style.backgroundColor = 'blue';
+        ball.style.borderRadius = '50%';
+        ball.style.position = 'absolute';
+
+        let ballSize = 50;
+        let ballX = window.innerWidth / 2 - ballSize / 2;
+        let ballY = window.innerHeight / 2 - ballSize / 2;
+        ball.style.left = ballX + 'px';
+        ball.style.top = ballY + 'px';
+
+        document.body.appendChild(ball);
+
+        // 공의 속도(시작은 느리게)
+        let ballDX = 5, ballDY = 6;
+
+        // 게임 상태 플래그
+        let inPlay = true;
+
+        // black div 자동 이동(공의 x좌표를 따라감)
+        function moveBlack() {
+            const blackWidth = parseInt(black.style.width, 10);
+            const winW = window.innerWidth;
+            let targetX = ballX + ballSize / 2 - blackWidth / 2;
+            if (targetX < 0) targetX = 0;
+            if (targetX + blackWidth > winW) targetX = winW - blackWidth;
+            black.style.left = targetX + 'px';
+
+            requestAnimationFrame(moveBlack);
+        }
+        moveBlack();
+
+        function isColliding(el1, el2) {
+            const r1 = el1.getBoundingClientRect();
+            const r2 = el2.getBoundingClientRect();
+            return !(
+                r1.right < r2.left ||
+                r1.left > r2.right ||
+                r1.bottom < r2.top ||
+                r1.top > r2.bottom
+            );
+        }
+
+        // 공 속도 증가 함수
+        function increaseBallSpeed() {
+            // 속도의 방향은 유지, 크기만 증가 (최대치 제한 가능)
+            let maxSpeed = 25;
+            let speedUp = 1.15; // 15%씩 증가
+            let newDX = Math.abs(ballDX) * speedUp;
+            let newDY = Math.abs(ballDY) * speedUp;
+            if (newDX > maxSpeed) newDX = maxSpeed;
+            if (newDY > maxSpeed) newDY = maxSpeed;
+            ballDX = (ballDX > 0 ? 1 : -1) * newDX;
+            ballDY = (ballDY > 0 ? 1 : -1) * newDY;
+        }
+
+        // 게임 리셋 함수 (점수 획득 후)
+        function resetGame() {
+            ballX = window.innerWidth / 2 - ballSize / 2;
+            ballY = window.innerHeight / 2 - ballSize / 2;
+            // 방향 랜덤, 속도는 다시 느리게
+            let startDX = 5, startDY = 6;
+            ballDX = (Math.random() > 0.5 ? 1 : -1) * startDX;
+            ballDY = (Math.random() > 0.5 ? 1 : -1) * startDY;
+            // red div x축 정가운데로 리셋
+            a.style.left = (window.innerWidth / 2 - parseInt(a.style.width, 10) / 2) + 'px';
+            a.style.top = (window.innerHeight - 100) + 'px';
+            black.style.left = (window.innerWidth / 2 - parseInt(black.style.width, 10) / 2) + 'px';
+            black.style.top = '50px';
+            inPlay = true;
+            requestAnimationFrame(moveBall);
+        }
+
+        function moveBall() {
+            if (!inPlay) return;
+
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+
+            ballX += ballDX;
+            ballY += ballDY;
+
+            if (ballY <= 0) {
+                redScore++;
+                updateScore();
+                inPlay = false;
+                setTimeout(function() {
+                    alert('🟥 Red 승리!');
+                    resetGame();
+                }, 10);
+                return;
+            }
+            if (ballY + ballSize >= winH) {
+                blackScore++;
+                updateScore();
+                inPlay = false;
+                setTimeout(function() {
+                    alert('⬛ Black 승리!');
+                    resetGame();
+                }, 10);
+                return;
+            }
+
+            if (ballX <= 0) {
+                ballX = 0;
+                ballDX *= -1;
+            }
+            if (ballX + ballSize >= winW) {
+                ballX = winW - ballSize;
+                ballDX *= -1;
+            }
+
+            // 플레이어(a, red)와 black div(컴퓨터)와의 대결 충돌 처리
+            [a, black].forEach(div => {
+                if (isColliding(ball, div)) {
+                    const ballRect = ball.getBoundingClientRect();
+                    const divRect = div.getBoundingClientRect();
+                    // red div(플레이어)에서 위로 튕김
+                    if (div === a && ballRect.bottom - ballDY <= divRect.top) {
+                        ballDY = -Math.abs(ballDY);
+                        ballY = divRect.top - ballSize - (ballRect.top - ballY);
+                        increaseBallSpeed(); // 속도 증가!
+                    }
+                    // black div(컴퓨터)에서 아래로 튕김
+                    else if (div === black && ballRect.top - ballDY >= divRect.bottom) {
+                        ballDY = Math.abs(ballDY);
+                        ballY = divRect.bottom - (ballRect.top - ballY);
+                        increaseBallSpeed(); // 속도 증가!
+                    }
+                    // 옆에서 부딪힌 경우 (옵션)
+                    else if (ballRect.right - ballDX <= divRect.left) {
+                        ballDX = -Math.abs(ballDX);
+                        ballX = divRect.left - ballSize - (ballRect.left - ballX);
+                    }
+                    else if (ballRect.left - ballDX >= divRect.right) {
+                        ballDX = Math.abs(ballDX);
+                        ballX = divRect.right - (ballRect.left - ballX);
+                    }
+                }
+            });
+
+            [b, g, y, o].forEach(div => {
+                if (isColliding(ball, div)) {
+                    const ballRect = ball.getBoundingClientRect();
+                    const divRect = div.getBoundingClientRect();
+                    if (ballRect.bottom - ballDY <= divRect.top) {
+                        ballDY = -Math.abs(ballDY);
+                        ballY = divRect.top - ballSize - (ballRect.top - ballY);
+                    } else if (ballRect.top - ballDY >= divRect.bottom) {
+                        ballDY = Math.abs(ballDY);
+                        ballY = divRect.bottom - (ballRect.top - ballY);
+                    } else if (ballRect.right - ballDX <= divRect.left) {
+                        ballDX = -Math.abs(ballDX);
+                        ballX = divRect.left - ballSize - (ballRect.left - ballX);
+                    } else if (ballRect.left - ballDX >= divRect.right) {
+                        ballDX = Math.abs(ballDX);
+                        ballX = divRect.right - (ballRect.left - ballX);
+                    }
+                }
+            });
+
+            ball.style.left = ballX + 'px';
+            ball.style.top = ballY + 'px';
+
+            requestAnimationFrame(moveBall);
+        }
+
+        moveBall();
+
+    </script>
+
+</body>
+</html>
