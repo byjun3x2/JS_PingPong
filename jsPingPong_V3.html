@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>🏓 JS PingPong Made By SANGJUN</title>
+</head>
+<body>
+<script>
+    // ======= 스타일 삽입 (vw, clamp 등 반응형 포함) =======
+    (function() {
+        var style = document.createElement('style');
+        style.innerHTML = `
+        html, body {
+            width: 100vw; height: 100vh; margin: 0; padding: 0; overflow: hidden !important;
+        }
+        .scoreboard {
+            font-size: clamp(16px, 2.2vw, 32px) !important;
+        }
+        .control-box {
+            font-size: clamp(13px, 1.3vw, 22px) !important;
+        }
+        .hp-bar-text {
+            font-size: clamp(13px, 1.2vw, 22px) !important;
+        }
+        @media (max-width: 768px) {
+            .scoreboard { font-size: clamp(12px, 4vw, 22px) !important; }
+            .control-box { font-size: clamp(11px, 2.5vw, 18px) !important; }
+            .hp-bar-text { font-size: clamp(11px, 2.2vw, 18px) !important; }
+        }
+        `;
+        document.head.appendChild(style);
+    })();
+
+    let redScore = 0, blackScore = 0;
+
+    // ======= 점수판 (상단 중앙) =======
+    let scoreBoard = document.createElement('div');
+    scoreBoard.className = 'scoreboard';
+    scoreBoard.style.position = 'fixed';
+    scoreBoard.style.top = '16px';
+    scoreBoard.style.left = '50%';
+    scoreBoard.style.transform = 'translateX(-50%)';
+    scoreBoard.style.fontWeight = 'bold';
+    scoreBoard.style.color = '#222';
+    scoreBoard.style.background = 'rgba(255,255,255,0.8)';
+    scoreBoard.style.padding = '10px 30px';
+    scoreBoard.style.borderRadius = '15px';
+    scoreBoard.style.zIndex = 1000;
+    scoreBoard.style.minWidth = '210px';
+    scoreBoard.style.textAlign = 'center';
+    document.body.appendChild(scoreBoard);
+
+    function updateScore() {
+        scoreBoard.innerHTML = `🟥 Red: ${redScore} &nbsp;&nbsp;|&nbsp;&nbsp; ⬛ Black: ${blackScore}`;
+    }
+    updateScore();
+
+    // ======= 설정 패널 (상단 좌측) =======
+    let controlBox = document.createElement('div');
+    controlBox.className = 'control-box';
+    controlBox.style.position = 'fixed';
+    controlBox.style.top = '16px';
+    controlBox.style.left = '16px';
+    controlBox.style.zIndex = '1200';
+    controlBox.style.background = 'rgba(255,255,255,0.85)';
+    controlBox.style.border = '1.5px solid #333';
+    controlBox.style.borderRadius = '10px';
+    controlBox.style.padding = '6px 14px 6px 10px';
+    controlBox.style.display = 'flex';
+    controlBox.style.alignItems = 'center';
+    controlBox.style.gap = '10px';
+    document.body.appendChild(controlBox);
+
+    // Red HP 입력
+    let redHpInputLabel = document.createElement('span');
+    redHpInputLabel.innerText = '🟥 HP: ';
+    controlBox.appendChild(redHpInputLabel);
+
+    let redHpInput = document.createElement('input');
+    redHpInput.type = 'number';
+    redHpInput.min = 1;
+    redHpInput.value = 10;
+    redHpInput.style.width = '60px';
+    redHpInput.style.fontSize = '1em';
+    redHpInput.style.textAlign = 'center';
+    redHpInput.style.border = '1px solid #aaa';
+    redHpInput.style.borderRadius = '6px';
+    redHpInput.style.padding = '2px 4px';
+    controlBox.appendChild(redHpInput);
+
+    // Black HP 입력
+    let blackHpInputLabel = document.createElement('span');
+    blackHpInputLabel.innerText = '⬛ HP: ';
+    controlBox.appendChild(blackHpInputLabel);
+
+    let blackHpInput = document.createElement('input');
+    blackHpInput.type = 'number';
+    blackHpInput.min = 1;
+    blackHpInput.value = 10;
+    blackHpInput.style.width = '60px';
+    blackHpInput.style.fontSize = '1em';
+    blackHpInput.style.textAlign = 'center';
+    blackHpInput.style.border = '1px solid #aaa';
+    blackHpInput.style.borderRadius = '6px';
+    blackHpInput.style.padding = '2px 4px';
+    controlBox.appendChild(blackHpInput);
+
+    // "초기 공속도" 입력 (x축 방향으로 변경)
+    let initSpeedLabel = document.createElement('span');
+    initSpeedLabel.innerText = '초기 공속도: ';
+    controlBox.appendChild(initSpeedLabel);
+
+    let initSpeedInput = document.createElement('input');
+    initSpeedInput.type = 'number';
+    initSpeedInput.min = 1;
+    initSpeedInput.max = 30;
+    initSpeedInput.value = 6;
+    initSpeedInput.style.width = '40px';
+    initSpeedInput.style.fontSize = '1em';
+    initSpeedInput.style.textAlign = 'center';
+    initSpeedInput.style.border = '1px solid #aaa';
+    initSpeedInput.style.borderRadius = '6px';
+    initSpeedInput.style.padding = '2px 4px';
+    controlBox.appendChild(initSpeedInput);
+
+    // 공속도 고정 체크박스
+    let speedLockLabel = document.createElement('span');
+    speedLockLabel.innerText = '공 속도 고정 ';
+    controlBox.appendChild(speedLockLabel);
+
+    let speedLockInput = document.createElement('input');
+    speedLockInput.type = 'checkbox';
+    speedLockInput.style.transform = 'scale(1.2)';
+    speedLockInput.style.marginRight = '3px';
+    controlBox.appendChild(speedLockInput);
+
+    // ======= HP 게이지 (우측 상단, 가로 일렬 flex) =======
+    let hpBarWrap = document.createElement('div');
+    hpBarWrap.style.position = 'fixed';
+    hpBarWrap.style.top = '16px';
+    hpBarWrap.style.right = '40px';
+    hpBarWrap.style.zIndex = 1100;
+    hpBarWrap.style.display = 'flex';
+    hpBarWrap.style.flexDirection = 'row';
+    hpBarWrap.style.gap = '24px';
+    document.body.appendChild(hpBarWrap);
+
+    // Red HP
+    let redHpBarContainer = document.createElement('div');
+    redHpBarContainer.style.width = '200px';
+    redHpBarContainer.style.height = '36px';
+    redHpBarContainer.style.background = 'rgba(255,30,30,0.08)';
+    redHpBarContainer.style.border = '2px solid #a22';
+    redHpBarContainer.style.borderRadius = '18px';
+    redHpBarContainer.style.display = 'flex';
+    redHpBarContainer.style.alignItems = 'center';
+    redHpBarContainer.style.padding = '6px 12px';
+    hpBarWrap.appendChild(redHpBarContainer);
+
+    let redHpBar = document.createElement('div');
+    redHpBar.style.height = '18px';
+    redHpBar.style.background = 'linear-gradient(90deg, #f44, #a00)';
+    redHpBar.style.borderRadius = '9px';
+    redHpBar.style.transition = 'width 0.2s';
+    redHpBarContainer.appendChild(redHpBar);
+
+    let redHpText = document.createElement('span');
+    redHpText.className = 'hp-bar-text';
+    redHpText.style.marginLeft = '16px';
+    redHpText.style.fontWeight = 'bold';
+    redHpText.style.color = '#a22';
+    redHpBarContainer.appendChild(redHpText);
+
+    // Black HP
+    let blackHpBarContainer = document.createElement('div');
+    blackHpBarContainer.style.width = '200px';
+    blackHpBarContainer.style.height = '36px';
+    blackHpBarContainer.style.background = 'rgba(30,30,30,0.2)';
+    blackHpBarContainer.style.border = '2px solid #333';
+    blackHpBarContainer.style.borderRadius = '18px';
+    blackHpBarContainer.style.display = 'flex';
+    blackHpBarContainer.style.alignItems = 'center';
+    blackHpBarContainer.style.padding = '6px 12px';
+    hpBarWrap.appendChild(blackHpBarContainer);
+
+    let blackHpBar = document.createElement('div');
+    blackHpBar.style.height = '18px';
+    blackHpBar.style.background = 'linear-gradient(90deg, #4af, #00c)';
+    blackHpBar.style.borderRadius = '9px';
+    blackHpBar.style.transition = 'width 0.2s';
+    blackHpBarContainer.appendChild(blackHpBar);
+
+    let blackHpText = document.createElement('span');
+    blackHpText.className = 'hp-bar-text';
+    blackHpText.style.marginLeft = '16px';
+    blackHpText.style.fontWeight = 'bold';
+    blackHpText.style.color = '#222';
+    blackHpBarContainer.appendChild(blackHpText);
+
+    // ======= HP/점수 상태 =======
+    let redMaxHP = 10, blackMaxHP = 10;
+    let redHP = redMaxHP, blackHP = blackMaxHP;
+
+    function updateRedHPBar() {
+        let percent = Math.max(0, redHP) / redMaxHP * 100;
+        redHpBar.style.width = percent + '%';
+        redHpBar.style.minWidth = '12px';
+        redHpBar.style.maxWidth = '120px';
+        redHpText.innerText = `🟥 HP: ${redHP} / ${redMaxHP}`;
+        if (percent > 60) {
+            redHpBar.style.background = 'linear-gradient(90deg, #f44, #a00)';
+        } else if (percent > 30) {
+            redHpBar.style.background = 'linear-gradient(90deg, #fc3, #f90)';
+        } else {
+            redHpBar.style.background = 'linear-gradient(90deg, #fff, #fc3)';
+        }
+    }
+    function updateBlackHPBar() {
+        let percent = Math.max(0, blackHP) / blackMaxHP * 100;
+        blackHpBar.style.width = percent + '%';
+        blackHpBar.style.minWidth = '12px';
+        blackHpBar.style.maxWidth = '120px';
+        blackHpText.innerText = `⬛ HP: ${blackHP} / ${blackMaxHP}`;
+        if (percent > 60) {
+            blackHpBar.style.background = 'linear-gradient(90deg, #4af, #00c)';
+        } else if (percent > 30) {
+            blackHpBar.style.background = 'linear-gradient(90deg, #fc3, #f90)';
+        } else {
+            blackHpBar.style.background = 'linear-gradient(90deg, #f44, #a00)';
+        }
+    }
+    updateRedHPBar();
+    updateBlackHPBar();
+
+    // ======= 입력 이벤트 =======
+    function setRedHPfromInput() {
+        let val = parseInt(redHpInput.value, 10);
+        if (isNaN(val) || val < 1) val = 1;
+        redMaxHP = val;
+        redHP = val;
+        redHpInput.value = redHP;
+        updateRedHPBar();
+        updateRedOpacity();
+    }
+    redHpInput.addEventListener('change', setRedHPfromInput);
+
+    function setBlackHPfromInput() {
+        let val = parseInt(blackHpInput.value, 10);
+        if (isNaN(val) || val < 1) val = 1;
+        blackMaxHP = val;
+        blackHP = val;
+        blackHpInput.value = blackHP;
+        updateBlackHPBar();
+        updateBlackOpacity();
+    }
+    blackHpInput.addEventListener('change', setBlackHPfromInput);
+
+    // 공속도 입력 (x축 방향으로 변경)
+    let ballAccel = parseFloat(initSpeedInput.value);
+    function setInitSpeedFromInput() {
+        let val = parseFloat(initSpeedInput.value);
+        if (isNaN(val) || val < 1) val = 1;
+        if (val > 30) val = 30;
+        ballAccel = val;
+        initSpeedInput.value = ballAccel;
+        if (ballDX > 0) ballDX = Math.abs(ballAccel);
+        else ballDX = -Math.abs(ballAccel);
+    }
+    initSpeedInput.addEventListener('change', setInitSpeedFromInput);
+
+    // 공속도 고정
+    let speedLock = false;
+    speedLockInput.addEventListener('change', function() {
+        speedLock = speedLockInput.checked;
+    });
+
+    // ======= 카운트다운 및 재시작 UI =======
+    let countdownDiv = document.createElement('div');
+    countdownDiv.style.position = 'fixed';
+    countdownDiv.style.top = '50%';
+    countdownDiv.style.left = '50%';
+    countdownDiv.style.transform = 'translate(-50%, -50%)';
+    countdownDiv.style.fontSize = '8em';
+    countdownDiv.style.fontWeight = 'bold';
+    countdownDiv.style.color = '#fff';
+    countdownDiv.style.background = 'rgba(0,0,0,0.7)';
+    countdownDiv.style.padding = '40px 80px';
+    countdownDiv.style.borderRadius = '30px';
+    countdownDiv.style.zIndex = 2000;
+    countdownDiv.style.textAlign = 'center';
+    countdownDiv.style.userSelect = 'none';
+    countdownDiv.style.display = 'none';
+    document.body.appendChild(countdownDiv);
+
+    let restartBtn = document.createElement('button');
+    restartBtn.innerText = '⟳ 재시작';
+    restartBtn.style.fontSize = '0.75em';
+    restartBtn.style.fontWeight = 'bold';
+    restartBtn.style.padding = '8px 20px';
+    restartBtn.style.background = '#3a7';
+    restartBtn.style.color = '#fff';
+    restartBtn.style.border = 'none';
+    restartBtn.style.borderRadius = '12px';
+    restartBtn.style.cursor = 'pointer';
+    restartBtn.style.marginTop = '10px';
+    restartBtn.style.transition = 'background 0.2s';
+    restartBtn.onmouseenter = () => restartBtn.style.background = '#295';
+    restartBtn.onmouseleave = () => restartBtn.style.background = '#3a7';
+
+    let restartMsg = document.createElement('div');
+    restartMsg.innerText = '클릭해서 다음 경기를 시작하세요!';
+    restartMsg.style.fontSize = '0.5em';
+    restartMsg.style.marginTop = '8px';
+    restartMsg.style.color = '#ffe';
+    restartMsg.style.textShadow = '0 2px 8px #0008';
+
+    function showRestartUI() {
+        countdownDiv.innerHTML = '';
+        countdownDiv.style.display = 'block';
+        countdownDiv.appendChild(restartBtn);
+        countdownDiv.appendChild(restartMsg);
+    }
+    restartBtn.onclick = function() {
+        countdownDiv.style.display = 'none';
+        startCountdown();
+    };
+
+    // ======= 플레이어(red) - 왼쪽 세로 패들 (길이 200px로 변경) =======
+    let a = document.createElement('div');
+    a.style.width = '10px';
+    a.style.height = '200px';
+    a.style.border = '1px solid black';
+    a.style.backgroundColor = 'red';
+    a.style.position = 'absolute';
+    a.style.left = '100px';
+    a.style.top = (window.innerHeight / 2 - 100) + 'px';
+    a.tabIndex = 0;
+    a.style.opacity = '1';
+    document.body.appendChild(a);
+    a.focus();
+
+    // ======= 컴퓨터(black) - 오른쪽 세로 패들 (길이 200px로 변경) =======
+    let black = document.createElement('div');
+    black.style.width = '10px';
+    black.style.height = '200px';
+    black.style.border = '1px solid black';
+    black.style.backgroundColor = 'black';
+    black.style.position = 'absolute';
+    black.style.left = (window.innerWidth - 100) + 'px';
+    black.style.top = (window.innerHeight / 2 - 100) + 'px';
+    black.style.opacity = '1';
+    document.body.appendChild(black);
+
+    // ======= HP 투명도 =======
+    function updateRedOpacity() {
+        if (redHP <= 0) {
+            a.style.opacity = '0';
+        } else {
+            let minOpacity = 0.1;
+            let opacity = minOpacity;
+            if (redMaxHP > 1) {
+                opacity = minOpacity + (redHP - 1) / (redMaxHP - 1) * (1 - minOpacity);
+            }
+            a.style.opacity = opacity.toString();
+        }
+    }
+    function updateBlackOpacity() {
+        if (blackHP <= 0) {
+            black.style.opacity = '0';
+        } else {
+            let minOpacity = 0.1;
+            let opacity = minOpacity;
+            if (blackMaxHP > 1) {
+                opacity = minOpacity + (blackHP - 1) / (blackMaxHP - 1) * (1 - minOpacity);
+            }
+            black.style.opacity = opacity.toString();
+        }
+    }
+
+    // ======= 장애물들 (세로 방향으로 변경, y축 이동, 균등 배치) =======
+    const redPaddleLeft = 100;
+    const blackPaddleLeft = window.innerWidth - 100;
+    const spaceBetween = blackPaddleLeft - redPaddleLeft;
+    const interval = spaceBetween / 5; // 4개 장애물을 위해 5등분
+    let b = document.createElement('div');
+    b.style.width = '10px';
+    b.style.height = '300px';
+    b.style.border = '1px solid black';
+    b.style.backgroundColor = 'blue';
+    b.style.position = 'absolute';
+    b.style.left = (redPaddleLeft + interval) + 'px';
+    b.style.top = '0px';
+    document.body.appendChild(b);
+
+    let g = document.createElement('div');
+    g.style.width = '10px';
+    g.style.height = '300px';
+    g.style.border = '1px solid black';
+    g.style.backgroundColor = 'green';
+    g.style.position = 'absolute';
+    const divHeight = 300;
+    g.style.left = (redPaddleLeft + interval * 2) + 'px';
+    g.style.top = (window.innerHeight - divHeight) + 'px';
+    document.body.appendChild(g);
+
+    let y = document.createElement('div');
+    y.style.width = '10px';
+    y.style.height = '300px';
+    y.style.border = '1px solid black';
+    y.style.backgroundColor = 'yellow';
+    y.style.position = 'absolute';
+    y.style.left = (redPaddleLeft + interval * 3) + 'px';
+    y.style.top = '0px';
+    document.body.appendChild(y);
+
+    let o = document.createElement('div');
+    o.style.width = '10px';
+    o.style.height = '300px';
+    o.style.border = '1px solid black';
+    o.style.backgroundColor = 'orange';
+    o.style.position = 'absolute';
+    o.style.left = (redPaddleLeft + interval * 4) + 'px';
+    o.style.top = (window.innerHeight - divHeight) + 'px';
+    document.body.appendChild(o);
+
+    let bY = 0;
+    let gY = window.innerHeight - divHeight;
+    let yY = 0;
+    let oY = window.innerHeight - divHeight;
+    let dYbg = 4;
+    let dYy = 6;
+    let dYo = -6;
+
+        function moveBG() {
+        const winH = window.innerHeight;
+        bY += dYbg;
+        gY -= dYbg;
+        if (bY <= 0) { bY = 0; dYbg *= -1; }
+        if (bY + divHeight >= winH) { bY = winH - divHeight; dYbg *= -1; }
+        b.style.top = bY + 'px';
+        g.style.top = gY + 'px';
+        requestAnimationFrame(moveBG);
+    }
+    moveBG();
+
+    function moveYO() {
+        const winH = window.innerHeight;
+        yY += dYy;
+        oY += dYo;
+        if (yY <= 0) { yY = 0; dYy *= -1; }
+        if (yY + divHeight >= winH) { yY = winH - divHeight; dYy *= -1; }
+        if (oY <= 0) { oY = 0; dYo *= -1; }
+        if (oY + divHeight >= winH) { oY = winH - divHeight; dYo *= -1; }
+        y.style.top = yY + 'px';
+        o.style.top = oY + 'px';
+        requestAnimationFrame(moveYO);
+    }
+    moveYO();
+
+    // ======= 플레이어(red) 마우스 이동 (y축 상하 이동으로 변경) =======
+    document.addEventListener('mousemove', function(e) {
+        const aHeight = parseInt(a.style.height, 10);
+        const winH = window.innerHeight;
+        let newTop = e.clientY - aHeight / 2;
+        if (newTop < 0) newTop = 0;
+        if (newTop + aHeight > winH) newTop = winH - aHeight;
+        a.style.top = newTop + 'px';
+    });
+
+    // ======= 공(ball) =======
+    let ball = document.createElement('div');
+    ball.style.width = '50px';
+    ball.style.height = '50px';
+    ball.style.backgroundColor = 'blue';
+    ball.style.borderRadius = '50%';
+    ball.style.position = 'absolute';
+    let ballSize = 50;
+    let ballX = window.innerWidth / 2 - ballSize / 2;
+    let ballY = window.innerHeight / 2 - ballSize / 2;
+    ball.style.left = ballX + 'px';
+    ball.style.top = ballY + 'px';
+    document.body.appendChild(ball);
+
+    let ballDX = parseFloat(initSpeedInput.value);
+    let ballDY = 5;
+    let inPlay = false;
+
+    // ======= 블랙 패들 자동 이동 (y축으로 변경) =======
+    function moveBlack() {
+        const blackHeight = parseInt(black.style.height, 10);
+        const winH = window.innerHeight;
+        let targetY = ballY + ballSize / 2 - blackHeight / 2;
+        let currentY = parseInt(black.style.top, 10);
+        let speed = 24;
+        if (Math.abs(targetY - currentY) < speed) {
+            currentY = targetY;
+        } else if (currentY < targetY) {
+            currentY += speed;
+        } else if (currentY > targetY) {
+            currentY -= speed;
+        }
+        if (currentY < 0) currentY = 0;
+        if (currentY + blackHeight > winH) currentY = winH - blackHeight;
+        black.style.top = currentY + 'px';
+        black.style.left = (window.innerWidth - 100) + 'px';
+        requestAnimationFrame(moveBlack);
+    }
+    moveBlack();
+
+    // ======= 충돌 판정 =======
+    function isColliding(el1, el2) {
+        const r1 = el1.getBoundingClientRect();
+        const r2 = el2.getBoundingClientRect();
+        return !(
+            r1.right < r2.left ||
+            r1.left > r2.right ||
+            r1.bottom < r2.top ||
+            r1.top > r2.bottom
+        );
+    }
+
+    // ======= 공속도 고정 기능 =======
+    function increaseBallSpeed(factor = 1.15) {
+        if (speedLock) return;
+        let maxSpeed = 25;
+        let newDX = Math.abs(ballDX) * factor;
+        let newDY = Math.abs(ballDY) * factor;
+        if (newDX > maxSpeed) newDX = maxSpeed;
+        if (newDY > maxSpeed) newDY = maxSpeed;
+        ballDX = (ballDX > 0 ? 1 : -1) * newDX;
+        ballDY = (ballDY > 0 ? 1 : -1) * newDY;
+        initSpeedInput.value = Math.abs(ballDX);
+    }
+
+    // ======= 게임 리셋 =======
+    function resetGame() {
+        ballX = window.innerWidth / 2 - ballSize / 2;
+        ballY = window.innerHeight / 2 - ballSize / 2;
+        let startDY = 5;
+        let initSpeed = parseFloat(initSpeedInput.value);
+        if (isNaN(initSpeed) || initSpeed < 1) initSpeed = 6;
+        ballDX = (Math.random() > 0.5 ? 1 : -1) * initSpeed;
+        ballDY = (Math.random() > 0.5 ? 1 : -1) * startDY;
+        a.style.top = (window.innerHeight / 2 - parseInt(a.style.height, 10) / 2) + 'px';
+        a.style.left = '100px';
+        black.style.top = (window.innerHeight / 2 - parseInt(black.style.height, 10) / 2) + 'px';
+        black.style.left = (window.innerWidth - 100) + 'px';
+        dYy = 6;
+        dYo = -6;
+        yY = 0;
+        oY = window.innerHeight - divHeight;
+        blackMaxHP = parseInt(blackHpInput.value, 10) || 10;
+        redMaxHP = parseInt(redHpInput.value, 10) || 10;
+        blackHP = blackMaxHP;
+        redHP = redMaxHP;
+        blackHpInput.value = blackHP;
+        redHpInput.value = redHP;
+        updateBlackHPBar();
+        updateBlackOpacity();
+        updateRedHPBar();
+        updateRedOpacity();
+        inPlay = false;
+        showRestartUI();
+    }
+
+    let blackHitCooldown = false;
+    let redHitCooldown = false;
+
+    // ======= 공 이동/충돌 =======
+    function moveBall() {
+        if (!inPlay) return;
+
+        const winW = window.innerWidth;
+        const winH = window.innerHeight;
+
+        ballX += ballDX;
+        ballY += ballDY;
+
+        if (ballX <= 0) {
+            blackScore++;
+            updateScore();
+            inPlay = false;
+            setTimeout(function() { resetGame(); }, 10);
+            return;
+        }
+        if (ballX + ballSize >= winW) {
+            redScore++;
+            updateScore();
+            inPlay = false;
+            setTimeout(function() { resetGame(); }, 10);
+            return;
+        }
+        if (ballY <= 0) {
+            ballY = 0;
+            ballDY *= -1;
+        }
+        if (ballY + ballSize >= winH) {
+            ballY = winH - ballSize;
+            ballDY *= -1;
+        }
+
+        [a, black].forEach(div => {
+            if (div === black && blackHP <= 0) return;
+            if (div === a && redHP <= 0) return;
+            if (isColliding(ball, div)) {
+                const ballRect = ball.getBoundingClientRect();
+                const divRect = div.getBoundingClientRect();
+                if (div === a && ballRect.left - ballDX >= divRect.right) {
+                    ballDX = Math.abs(ballDX);
+                    ballX = divRect.right - (ballRect.left - ballX);
+                    increaseBallSpeed(1.05);
+
+                    if (!redHitCooldown) {
+                        redHP--;
+                        redHpInput.value = redHP;
+                        updateRedHPBar();
+                        updateRedOpacity();
+                        redHitCooldown = true;
+                        setTimeout(() => { redHitCooldown = false; }, 120);
+                        if (redHP <= 0) {
+                            blackScore++;
+                            updateScore();
+                            inPlay = false;
+                            setTimeout(function() { resetGame(); }, 10);
+                            return;
+                        }
+                    }
+                } else if (div === black && ballRect.right - ballDX <= divRect.left) {
+                    ballDX = -Math.abs(ballDX);
+                    ballX = divRect.left - ballSize - (ballRect.left - ballX);
+                    increaseBallSpeed(1.10);
+
+                    if (!blackHitCooldown) {
+                        blackHP--;
+                        blackHpInput.value = blackHP;
+                        updateBlackHPBar();
+                        updateBlackOpacity();
+                        blackHitCooldown = true;
+                        setTimeout(() => { blackHitCooldown = false; }, 120);
+                        if (blackHP <= 0) {
+                            redScore++;
+                            updateScore();
+                            inPlay = false;
+                            setTimeout(function() { resetGame(); }, 10);
+                            return;
+                        }
+                    }
+                } else if (ballRect.bottom - ballDY <= divRect.top) {
+                    ballDY = -Math.abs(ballDY);
+                    ballY = divRect.top - ballSize - (ballRect.top - ballY);
+                } else if (ballRect.top - ballDY >= divRect.bottom) {
+                    ballDY = Math.abs(ballDY);
+                    ballY = divRect.bottom - (ballRect.top - ballY);
+                }
+            }
+        });
+
+        // 장애물 충돌
+        [b, g, y, o].forEach(div => {
+            if (isColliding(ball, div)) {
+                const ballRect = ball.getBoundingClientRect();
+                const divRect = div.getBoundingClientRect();
+                if (ballRect.left - ballDX >= divRect.right) {
+                    ballDX = Math.abs(ballDX);
+                    ballX = divRect.right - (ballRect.left - ballX);
+                } else if (ballRect.right - ballDX <= divRect.left) {
+                    ballDX = -Math.abs(ballDX);
+                    ballX = divRect.left - ballSize - (ballRect.left - ballX);
+                } else if (ballRect.bottom - ballDY <= divRect.top) {
+                    ballDY = -Math.abs(ballDY);
+                    ballY = divRect.top - ballSize - (ballRect.top - ballY);
+                } else if (ballRect.top - ballDY >= divRect.bottom) {
+                    ballDY = Math.abs(ballDY);
+                    ballY = divRect.bottom - (ballRect.top - ballY);
+                }
+            }
+        });
+
+        ball.style.left = ballX + 'px';
+        ball.style.top = ballY + 'px';
+
+        requestAnimationFrame(moveBall);
+    }
+
+    // ======= 카운트다운 함수 =======
+    function startCountdown() {
+        ballX = window.innerWidth / 2 - ballSize / 2;
+        ballY = window.innerHeight / 2 - ballSize / 2;
+        ball.style.left = ballX + 'px';
+        ball.style.top = ballY + 'px';
+
+        let count = 3;
+        countdownDiv.innerText = count;
+        countdownDiv.style.display = 'block';
+        let interval = setInterval(() => {
+            count--;
+            if (count > 0) {
+                countdownDiv.innerText = count;
+            } else if (count === 0) {
+                countdownDiv.innerText = '시작!';
+            } else {
+                clearInterval(interval);
+                countdownDiv.style.display = 'none';
+                inPlay = true;
+                requestAnimationFrame(moveBall);
+            }
+        }, 1000);
+    }
+
+    // ======= 최초 시작 =======
+    startCountdown();
+
+</script>
+</body>
+</html>
+
