@@ -1,6 +1,6 @@
+# 🏓 JS PingPong (프로젝트 버그 수정중)
 ![Hotdeal Gallery Logo](./JS_Pingpong.png)
 
-# 🏓 JS PingPong (프로젝트 버그 수정중)
 자바스크립트의 Mouse Move 이벤트를 이용해 Red Paddle(탁구채)을 움직여서 Black Paddle(컴퓨터)을 상대해 이기는 탁구게임
 유저가 쉽게 이기는 것을 방지하기 위해 컴퓨터 Paddle의 중앙에 타격하게 구성
 대신 각종 설정으로 컴퓨터에게 핸디캡을 부여가능 (이후 내용 참조)
