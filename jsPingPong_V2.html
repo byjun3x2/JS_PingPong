@@ -10,6 +10,7 @@
         }
         html, body, * {
             font-family: 'kfont', sans-serif !important;
+            overflow: hidden;
         }
 
         .start-ui {
@@ -76,6 +77,18 @@
             .control-box { font-size: clamp(11px, 2.5vw, 18px) !important; }
             .hp-bar-text { font-size: clamp(11px, 2.2vw, 18px) !important; }
         }
+        .paddle {
+            background: linear-gradient(90deg, #f44, #a00);
+            border: 2px solid #a22;
+            border-radius: 12px;
+            box-shadow: 0 4px 18px #a004;
+            transition: box-shadow 0.2s, background 0.3s;
+        }
+        .paddle:hover {
+            box-shadow: 0 8px 32px #a008;
+            background: linear-gradient(90deg, #ff6, #f44);
+        }
+
     </style>
 </head>
 <body>
@@ -144,7 +157,7 @@
 
     // "초기 공속도" 입력
     let initSpeedLabel = document.createElement('span');
-    initSpeedLabel.innerText = '초기 공속도: ';
+    initSpeedLabel.innerText = '공속도: ';
     controlBox.appendChild(initSpeedLabel);
 
     let initSpeedInput = document.createElement('input');
